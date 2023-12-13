@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Food</title>
+    <link rel="stylesheet" type="text/css" href="../static/css/addfood.css">
+</head>
+<body>
+    <div class = "container">
+        <h1>Add New Food Item</h1>
+        <!-- Flash messages section -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div id="flash-messages">
+              {% for message in messages %}
+                <div class="flash-message">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <div id="error" style="color: red;"></div>
+        <form id="addFoodForm" method="post" action="/add_food">
+            <input type="text" class="input-field" id="foodName" name ="foodName" placeholder="Food Name - REQUIRED">
+            <input type="text" class="input-field" id="portion_size" name = "portion_size" placeholder="Portion Size (g) - Optional">
+            <input type="text" class="input-field" id="calories" name = "calories" placeholder="Calories (kcal) - Optional">
+            <input type="text" class="input-field" id="total_fat" name = "total_fat" placeholder="Total Fat (g) - Optional">
+            <input type="text" class="input-field" id="saturated_fat" name = "saturated_fat" placeholder="Saturated Fat (g) - Optional">
+            <input type="text" class="input-field" id="trans_fat" name = "trans_fat" placeholder="Trans Fat (g) - Optional">
+            <input type="text" class="input-field" id="cholesterol" name = "cholesterol" placeholder="Cholesterol (mg) - Optional">
+            <input type="text" class="input-field" id="sodium" name = "sodium" placeholder="Sodium (mg) - Optional">
+            <input type="text" class="input-field" id="total_carbohydrates" name = "total_carbohydrates" placeholder="Total Carbohydrates (g) - Optional">
+            <input type="text" class="input-field" id="dietary_fiber" name = "dietary_fiber" placeholder="Dietary Fiber (g) - Optional">
+            <input type="text" class="input-field" id="sugars" name = "sugars" placeholder="Sugars (g) - Optional">
+            <input type="text" class="input-field" id="protein" name = "protein" placeholder="Protein (g) - Optional">
+            <input type="text" class="input-field" id="vitamin_d" name = "vitamin_d" placeholder="Vitamin D (µg) - Optional">
+            <input type="text" class="input-field" id="calcium" name = "calcium" placeholder="Calcium (mg) - Optional">
+            <input type="text" class="input-field" id="iron" name = "iron" placeholder="Iron (mg) - Optional">
+            <input type="text" class="input-field" id="potassium" name = "potassium" placeholder="Potassium (mg) - Optional">
+            <button type="submit" class="submit-button" id="addFoodButton">Add Food</button>
+        </form>
+        <!-- Button to return to the food lookup page -->
+        <a href="/" class="return-button">Return to Food Lookup</a>
+        </div>
+    <script src="../static/javascript/addfood.js"></script>
+</body>
+</html>
