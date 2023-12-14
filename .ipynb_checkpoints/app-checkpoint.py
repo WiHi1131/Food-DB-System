@@ -653,6 +653,16 @@ def db_queries():
     days_records = cur.fetchall()
     days_columns = [desc[0] for desc in cur.description]
     response_string += format_records_as_table(days_records, "Days Logged by User ID 1", days_columns)
+    
+    # Query: Count dishes for each type of meal
+    cur.execute('''
+        SELECT type, COUNT(*) AS total_dishes
+        FROM Meals
+        GROUP BY type;
+    ''')
+    meal_type_count = cur.fetchall()
+    meal_type_count_columns = [desc[0] for desc in cur.description]
+    response_string = format_records_as_table(meal_type_count, "Total Dishes for Each Meal Type (GROUP BY EXAMPLE)", meal_type_count_columns)
 
     # Close the database connection
     cur.close()
@@ -707,7 +717,7 @@ def db_joins():
     ''')
     dish_calories = cur.fetchall()
     dish_calories_columns = [desc[0] for desc in cur.description]
-    response_string += format_records_as_table(dish_calories, "Calories in Each Dish", dish_calories_columns)
+    response_string += format_records_as_table(dish_calories, "Calories in Each Dish (GROUP BY EXAMPLE)", dish_calories_columns)
 
     # Query 3: Foods in lunch dishes
     cur.execute('''
@@ -721,6 +731,18 @@ def db_joins():
     lunch_foods = cur.fetchall()
     lunch_foods_columns = [desc[0] for desc in cur.description]
     response_string += format_records_as_table(lunch_foods, "Foods in Lunch Dishes", lunch_foods_columns)
+    
+    # New Query: Group dishes by shared ingredients
+    cur.execute('''
+        SELECT Foods.name AS Ingredient, Dishes.name AS Dish
+        FROM Foods
+        JOIN foodsInDish ON Foods.food_id = foodsInDish.food_id
+        JOIN Dishes ON foodsInDish.dish_id = Dishes.dish_id
+        ORDER BY Foods.name, Dishes.name;
+    ''')
+    dishes_by_ingredients = cur.fetchall()
+    dishes_by_ingredients_columns = [desc[0] for desc in cur.description]
+    response_string += format_records_as_table(dishes_by_ingredients, "Dishes Grouped by Shared Ingredients", dishes_by_ingredients_columns)
 
     cur.close()
     conn.close()
