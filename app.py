@@ -345,19 +345,19 @@ def inserting():
             (meal_time, dish_ids[dish_name], meal_type)
         )
 
-     # Retrieve the meal_ids that were just inserted
-    cur.execute('SELECT meal_id FROM Meals ORDER BY meal_id DESC LIMIT %s;', (len(meal_data),))
-    meal_ids = [meal_id[0] for meal_id in cur.fetchall()]
+    # Retrieve meal_ids for the Days table
+    cur.execute('SELECT meal_id, meal_time FROM Meals;')
+    meal_ids = {str(meal_time): meal_id for meal_id, meal_time in cur.fetchall()}
 
 
     # Define day meals with reference to usernames and meal times
     day_meal_data = [
-        ('2023-01-10', 'john_doe', meal_ids[0]),
-        ('2023-01-10', 'john_doe', meal_ids[1]),
-        ('2023-01-10', 'john_doe', meal_ids[2]), 
-        ('2023-01-11', 'jane_smith', meal_ids[3]), 
-        ('2023-01-11', 'jane_smith', meal_ids[4]), 
-        ('2023-01-11', 'jane_smith', meal_ids[5])
+        ('2023-01-10', 'john_doe', '2023-01-10 08:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 13:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 18:00:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 07:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 12:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 19:00:00')
     ]
 
     # Insert into Days table with dynamic user_id and meal_id references
