@@ -308,7 +308,7 @@ def inserting():
         'Tomato Pasta': [('Tomato', 1.0), ('Olive Oil', 0.3), ('Penne Pasta', 1.5)],
         'Quinoa Salad': [('Quinoa', 1.0), ('Spinach', 1.0), ('Almonds', 0.5), ('Avocado', 0.5)], 
         'Banana Smoothie': [('Banana', 1.0), ('Spincah', 0.5), ('Almonds', 0.3), ('Whole Milk', 1.0)], 
-        'Chicken Quinoa Bowl' [('Chicken Breast', 1.0), ('Quinoa', 1.0), ('Tomato', 0.5)]
+        'Chicken Quinoa Bowl': [('Chicken Breast', 1.0), ('Quinoa', 1.0), ('Tomato', 0.5)]
         
     }
     
