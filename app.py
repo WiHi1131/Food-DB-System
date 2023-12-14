@@ -418,9 +418,16 @@ def selecting():
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
-    cur.execute('''
-        DROP TABLE Foods;
-    ''')
+
+    # Drop tables in reverse order of creation due to foreign key constraints
+    tables_to_drop = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
+
+    for table in tables_to_drop:
+        cur.execute('DROP TABLE IF EXISTS {};'.format(table))
+
+    # Drop the enum type meal_type as well
+    cur.execute('DROP TYPE IF EXISTS meal_type;')
+
     conn.commit()
     conn.close()
-    return "Foods Table Successfully Dropped"
+    return "All Tables Successfully Dropped"
