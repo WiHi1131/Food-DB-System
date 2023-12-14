@@ -362,10 +362,14 @@ def inserting():
 
     # Insert into Days table with dynamic user_id and meal_id references
     for date, username, meal_time in day_meal_data:
-        cur.execute(
-            'INSERT INTO Days (date, user_id, meal_id) VALUES (%s, %s, %s)',
-            (date, user_ids[username], meal_id)
-        )
+        if meal_time in meal_ids:
+            meal_id = meal_ids[meal_time]
+            cur.execute(
+                'INSERT INTO Days (date, user_id, meal_id) VALUES (%s, %s, %s)',
+                (date, user_ids[username], meal_id)
+            )
+        else:
+            print(f"Meal time {meal_time} not found in meal_ids")
 
     conn.commit()
     conn.close()
