@@ -258,6 +258,198 @@ def create():
         );
     ''')
     
+    def create_triggers(cur):
+        # Trigger function for updating dish_id in foodsInDish
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION update_dish_id()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE foodsInDish
+                SET dish_id = NEW.dish_id
+                WHERE dish_id = OLD.dish_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+
+        # Trigger for updating dish_id
+        cur.execute('''
+            CREATE TRIGGER update_dish_id_trigger
+            AFTER UPDATE OF dish_id ON Dishes
+            FOR EACH ROW
+            EXECUTE FUNCTION update_dish_id();
+        ''')
+
+        # Trigger function for updating food_id in foodsInDish
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION update_food_id()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE foodsInDish
+                SET food_id = NEW.food_id
+                WHERE food_id = OLD.food_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+
+        # Trigger for updating food_id
+        cur.execute('''
+            CREATE TRIGGER update_food_id_trigger
+            AFTER UPDATE OF food_id ON Foods
+            FOR EACH ROW
+            EXECUTE FUNCTION update_food_id();
+        ''')
+
+        # Trigger function for deleting dish in foodsInDish
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION delete_dish()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM foodsInDish WHERE dish_id = OLD.dish_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+
+        # Trigger for deleting dish
+        cur.execute('''
+            CREATE TRIGGER delete_dish_trigger
+            AFTER DELETE ON Dishes
+            FOR EACH ROW
+            EXECUTE FUNCTION delete_dish();
+        ''')
+
+        # Trigger function for deleting food in foodsInDish
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION delete_food()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM foodsInDish WHERE food_id = OLD.food_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+
+        # Trigger for deleting food
+        cur.execute('''
+            CREATE TRIGGER delete_food_trigger
+            AFTER DELETE ON Foods
+            FOR EACH ROW
+            EXECUTE FUNCTION delete_food();
+        ''')
+        
+        # Update dish_id in Meals
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION update_meals_dish_id()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE Meals
+                SET dish_id = NEW.dish_id
+                WHERE dish_id = OLD.dish_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER update_meals_dish_id_trigger
+            AFTER UPDATE OF dish_id ON Dishes
+            FOR EACH ROW
+            EXECUTE FUNCTION update_meals_dish_id();
+        ''')
+
+        # Delete meal when Dish is deleted
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION delete_meal()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM Meals WHERE dish_id = OLD.dish_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER delete_meal_trigger
+            AFTER DELETE ON Dishes
+            FOR EACH ROW
+            EXECUTE FUNCTION delete_meal();
+        ''')
+
+        # Triggers for Days table
+        # Update user_id in Days
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION update_days_user_id()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE Days
+                SET user_id = NEW.user_id
+                WHERE user_id = OLD.user_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER update_days_user_id_trigger
+            AFTER UPDATE OF user_id ON Users
+            FOR EACH ROW
+            EXECUTE FUNCTION update_days_user_id();
+        ''')
+
+        # Update meal_id in Days
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION update_days_meal_id()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                UPDATE Days
+                SET meal_id = NEW.meal_id
+                WHERE meal_id = OLD.meal_id;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER update_days_meal_id_trigger
+            AFTER UPDATE OF meal_id ON Meals
+            FOR EACH ROW
+            EXECUTE FUNCTION update_days_meal_id();
+        ''')
+
+        # Delete day when User is deleted
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION delete_day_user()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM Days WHERE user_id = OLD.user_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER delete_day_user_trigger
+            AFTER DELETE ON Users
+            FOR EACH ROW
+            EXECUTE FUNCTION delete_day_user();
+        ''')
+
+        # Delete day when Meal is deleted
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION delete_day_meal()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                DELETE FROM Days WHERE meal_id = OLD.meal_id;
+                RETURN OLD;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        cur.execute('''
+            CREATE TRIGGER delete_day_meal_trigger
+            AFTER DELETE ON Meals
+            FOR EACH ROW
+            EXECUTE FUNCTION delete_day_meal();
+        ''')
+    # Create triggers
+    create_triggers(cur)
+    
     conn.commit()
     conn.close()
     return "All Tables Successfully Created!"
@@ -345,19 +537,19 @@ def inserting():
             (meal_time, dish_ids[dish_name], meal_type)
         )
 
-     # Retrieve the meal_ids that were just inserted
-    cur.execute('SELECT meal_id FROM Meals ORDER BY meal_id DESC LIMIT %s;', (len(meal_data),))
-    meal_ids = [meal_id[0] for meal_id in cur.fetchall()]
+    # Retrieve meal_ids for the Days table
+    cur.execute('SELECT meal_id, meal_time FROM Meals;')
+    meal_ids = {str(meal_time): meal_id for meal_id, meal_time in cur.fetchall()}
 
 
     # Define day meals with reference to usernames and meal times
     day_meal_data = [
-        ('2023-01-10', 'john_doe', meal_ids[0]),
-        ('2023-01-10', 'john_doe', meal_ids[1]),
-        ('2023-01-10', 'john_doe', meal_ids[2]), 
-        ('2023-01-11', 'jane_smith', meal_ids[3]), 
-        ('2023-01-11', 'jane_smith', meal_ids[4]), 
-        ('2023-01-11', 'jane_smith', meal_ids[5])
+        ('2023-01-10', 'john_doe', '2023-01-10 08:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 13:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 18:00:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 07:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 12:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 19:00:00')
     ]
 
     # Insert into Days table with dynamic user_id and meal_id references
@@ -381,9 +573,17 @@ def selecting():
     cur = conn.cursor()
     
     # Function to format records into an HTML table
-    def format_records_as_table(records, table_name):
+    def format_records_as_table(records, table_name, column_names):
         response_string = "<h2>{}</h2>".format(table_name)
         response_string += "<table border='1'>"
+        
+        # Add column headers
+        response_string += "<tr>"
+        for col_name in column_names:
+            response_string += "<th>{}</th>".format(col_name)
+        response_string += "</tr>"
+        
+        # Add table data
         for record in records:
             response_string += "<tr>"
             for info in record:
@@ -392,35 +592,16 @@ def selecting():
         response_string += "</table><br>"
         return response_string
 
-    # Query and display data from Foods table
-    cur.execute('SELECT * FROM Foods;')
-    records = cur.fetchall()
-    response_string = format_records_as_table(records, "Foods")
+    def query_and_format_table(cur, table_name):
+        cur.execute(f'SELECT * FROM {table_name};')
+        records = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return format_records_as_table(records, table_name, column_names)
 
-    # Query and display data from Dishes table
-    cur.execute('SELECT * FROM Dishes;')
-    records = cur.fetchall()
-    response_string += format_records_as_table(records, "Dishes")
-
-    # Query and display data from foodsInDish table
-    cur.execute('SELECT * FROM foodsInDish;')
-    records = cur.fetchall()
-    response_string += format_records_as_table(records, "foodsinDish")
-
-    # Query and display data from Meals table
-    cur.execute('SELECT * FROM Meals;')
-    records = cur.fetchall()
-    response_string += format_records_as_table(records, "Meals")
-
-    # Query and display data from Users table
-    cur.execute('SELECT * FROM Users;')
-    records = cur.fetchall()
-    response_string += format_records_as_table(records, "Users")
-
-    # Query and display data from Days table
-    cur.execute('SELECT * FROM Days;')
-    records = cur.fetchall()
-    response_string += format_records_as_table(records, "Days")
+    # Query and display data from each table
+    response_string = ""
+    for table in ["Foods", "Dishes", "foodsinDish", "Meals", "Users", "Days"]:
+        response_string += query_and_format_table(cur, table)
 
     conn.close()
     return response_string
