@@ -293,7 +293,32 @@ def inserting():
     ]
     cur.executemany('INSERT INTO Dishes (name, description) VALUES (%s, %s)', dishes)
     
+    # Retrieve dish_ids by matching dish names
+    cur.execute('SELECT dish_id, name FROM Dishes;')
+    dish_ids = {name: dish_id for dish_id, name in cur.fetchall()}
+
+    # Retrieve food_ids by matching food names
+    cur.execute('SELECT food_id, name FROM Foods;')
+    food_ids = {name: food_id for food_id, name in cur.fetchall()}
+
+    # Define the composition of each dish
+    dishes_composition = {
+        'Chicken Salad': [('Chicken Breast', 1.0), ('Spinach', 1.0), ('Tomato', 0.5), ('Feta Cheese', 0.5)],
+        'Egg Fried Rice': [('Eggs', 2.0), ('Brown Rice', 1.0), ('Onion, raw', 0.5), ('Olive Oil', 2)],
+        'Tomato Pasta': [('Tomato', 1.0), ('Olive Oil', 0.3), ('Penne Pasta', 1.5)],
+        'Quinoa Salad': [('Quinoa', 1.0), ('Spinach', 1.0), ('Almonds', 0.5), ('Avocado', 0.5)], 
+        'Banana Smoothie': [('Banana', 1.0), ('Spincah', 0.5), ('Almonds', 0.3), ('Whole Milk', 1.0)], 
+        'Chicken Quinoa Bowl' [('Chicken Breast', 1.0), ('Quinoa', 1.0), ('Tomato', 0.5)]
+        
+    }
     
+    # Insert into foodsInDish
+    for dish_name, ingredients in dishes_composition.items():
+        for ingredient_name, portion_multiplier in ingredients:
+            cur.execute(
+                'INSERT INTO foodsInDish (dish_id, food_id, portion_multiplier) VALUES (%s, %s, %s)',
+                (dish_ids[dish_name], food_ids[ingredient_name], portion_multiplier)
+            )
     conn.commit()
     conn.close()
     return "All Tables Successfully Populated!"
