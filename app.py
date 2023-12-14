@@ -660,6 +660,72 @@ def db_queries():
 
     return response_string
 
+@app.route('/db_joins')
+def db_joins():
+    conn = psycopg2.connect("your_connection_string")
+    cur = conn.cursor()
+
+    # Function to format records into an HTML table
+    def format_records_as_table(records, table_name, column_names):
+        response_string = f"<h2>{table_name}</h2>"
+        response_string += "<table border='1'>"
+        
+        # Add column headers
+        response_string += "<tr>"
+        for col_name in column_names:
+            response_string += f"<th>{col_name}</th>"
+        response_string += "</tr>"
+        
+        # Add table data
+        for record in records:
+            response_string += "<tr>"
+            for info in record:
+                response_string += f"<td>{info}</td>"
+            response_string += "</tr>"
+        response_string += "</table><br>"
+        return response_string
+
+    # Query 1: Dishes containing spinach
+    cur.execute('''
+        SELECT DISTINCT Dishes.name, Dishes.description
+        FROM Dishes
+        JOIN foodsInDish ON Dishes.dish_id = foodsInDish.dish_id
+        JOIN Foods ON foodsInDish.food_id = Foods.food_id
+        WHERE Foods.name = 'spinach';
+    ''')
+    dishes_spinach = cur.fetchall()
+    dishes_spinach_columns = [desc[0] for desc in cur.description]
+    response_string = format_records_as_table(dishes_spinach, "Dishes Containing Spinach", dishes_spinach_columns)
+
+    # Query 2: Calories in each dish
+    cur.execute('''
+        SELECT Dishes.name, SUM(Foods.calories * foodsInDish.portion_multiplier) AS total_calories
+        FROM Dishes
+        JOIN foodsInDish ON Dishes.dish_id = foodsInDish.dish_id
+        JOIN Foods ON foodsInDish.food_id = Foods.food_id
+        GROUP BY Dishes.name;
+    ''')
+    dish_calories = cur.fetchall()
+    dish_calories_columns = [desc[0] for desc in cur.description]
+    response_string += format_records_as_table(dish_calories, "Calories in Each Dish", dish_calories_columns)
+
+    # Query 3: Foods in lunch dishes
+    cur.execute('''
+        SELECT Foods.name
+        FROM Meals
+        JOIN Dishes ON Meals.dish_id = Dishes.dish_id
+        JOIN foodsInDish ON Dishes.dish_id = foodsInDish.dish_id
+        JOIN Foods ON foodsInDish.food_id = Foods.food_id
+        WHERE Meals.type = 'lunch';
+    ''')
+    lunch_foods = cur.fetchall()
+    lunch_foods_columns = [desc[0] for desc in cur.description]
+    response_string += format_records_as_table(lunch_foods, "Foods in Lunch Dishes", lunch_foods_columns)
+
+    cur.close()
+    conn.close()
+    return response_string
+
 @app.route('/db_drop')
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
