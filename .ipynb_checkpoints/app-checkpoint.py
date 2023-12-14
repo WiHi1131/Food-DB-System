@@ -691,7 +691,7 @@ def db_joins():
         FROM Dishes
         JOIN foodsInDish ON Dishes.dish_id = foodsInDish.dish_id
         JOIN Foods ON foodsInDish.food_id = Foods.food_id
-        WHERE Foods.name = 'spinach';
+        WHERE Foods.name = 'Spinach';
     ''')
     dishes_spinach = cur.fetchall()
     dishes_spinach_columns = [desc[0] for desc in cur.description]
