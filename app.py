@@ -319,6 +319,53 @@ def inserting():
                 'INSERT INTO foodsInDish (dish_id, food_id, portion_multiplier) VALUES (%s, %s, %s)',
                 (dish_ids[dish_name], food_ids[ingredient_name], portion_multiplier)
             )
+            
+    # Inserting into Users table
+    users = [('john_doe'), ('jane_smith'), ('alex_brown')]
+    cur.executemany('INSERT INTO Users (username) VALUES (%s)', [(user,) for user in users])
+
+    # Retrieve user_ids by matching usernames
+    cur.execute('SELECT user_id, username FROM Users;')
+    user_ids = {username: user_id for user_id, username in cur.fetchall()}
+
+    # Define meals with reference to dish names
+    meal_data = [
+        ('2023-01-10 08:00:00', 'Chicken Salad', 'breakfast'),
+        ('2023-01-10 13:00:00', 'Egg Fried Rice', 'lunch'),
+        ('2023-01-10 18:00:00', 'Tomato Pasta', 'dinner'),
+        ('2023-01-11 07:30:00', 'Banana Smoothie', 'breakfast'),
+        ('2023-01-11 12:30:00', 'Quinoa Salad', 'lunch'),
+        ('2023-01-11 19:00:00', 'Chicken Quinoa Bowl', 'dinner')
+    ]
+
+    # Insert into Meals table with dynamic dish_id reference
+    for meal_time, dish_name, meal_type in meal_data:
+        cur.execute(
+            'INSERT INTO Meals (meal_time, dish_id, type) VALUES (%s, %s, %s)',
+            (meal_time, dish_ids[dish_name], meal_type)
+        )
+
+    # Retrieve meal_ids for the Days table
+    cur.execute('SELECT meal_id, meal_time FROM Meals;')
+    meal_ids = {meal_time: meal_id for meal_id, meal_time in cur.fetchall()}
+
+    # Define day meals with reference to usernames and meal times
+    day_meal_data = [
+        ('2023-01-10', 'john_doe', '2023-01-10 08:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 13:00:00'),
+        ('2023-01-10', 'john_doe', '2023-01-10 18:00:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 07:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 12:30:00'), 
+        ('2023-01-11', 'jane_smith', '2023-01-11 19:00:00')
+    ]
+
+    # Insert into Days table with dynamic user_id and meal_id references
+    for date, username, meal_time in day_meal_data:
+        cur.execute(
+            'INSERT INTO Days (date, user_id, meal_id) VALUES (%s, %s, %s)',
+            (date, user_ids[username], meal_ids[meal_time])
+        )
+
     conn.commit()
     conn.close()
     return "All Tables Successfully Populated!"
