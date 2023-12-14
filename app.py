@@ -198,6 +198,10 @@ def create():
         potassium REAL               -- Typically in milligrams (mg)
         );
     ''')
+    #Create index on name of Foods table
+    cur.execute('''
+        CREATE INDEX idx_foods_name ON Foods (name);
+        ''')
     # Create Dishes table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS Dishes (
@@ -480,7 +484,7 @@ def inserting():
         ('Egg Fried Rice', 'Fried rice with eggs, onions, and olive oil'),
         ('Tomato Pasta', 'Pasta with fresh tomato sauce and olive oil'),
         ('Quinoa Salad', 'Quinoa with spinach, almonds, and avocado'),
-        ('Banana Smoothie', 'Smoothie made with banana, spinach, and almond milk'),
+        ('Banana Smoothie', 'Smoothie made with banana, spinach, almonds, and whole milk'),
         ('Chicken Quinoa Bowl', 'Bowl of quinoa with grilled chicken and vegetables')
     ]
     cur.executemany('INSERT INTO Dishes (name, description) VALUES (%s, %s)', dishes)
@@ -604,6 +608,56 @@ def selecting():
         response_string += query_and_format_table(cur, table)
 
     conn.close()
+    return response_string
+
+@app.route('/db_queries')
+def db_queries():
+    # Database connection
+    conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
+    cur = conn.cursor()
+
+    # Function to format records into an HTML table
+    def format_records_as_table(records, table_name, column_names):
+        response_string = f"<h2>{table_name}</h2>"
+        response_string += "<table border='1'>"
+        
+        # Add column headers
+        response_string += "<tr>"
+        for col_name in column_names:
+            response_string += f"<th>{col_name}</th>"
+        response_string += "</tr>"
+        
+        # Add table data
+        for record in records:
+            response_string += "<tr>"
+            for info in record:
+                response_string += f"<td>{info}</td>"
+            response_string += "</tr>"
+        response_string += "</table><br>"
+        return response_string
+
+    # Query for foods with nonzero cholesterol
+    cur.execute("SELECT * FROM Foods WHERE cholesterol > 0;")
+    foods_records = cur.fetchall()
+    foods_columns = [desc[0] for desc in cur.description]
+    response_string = format_records_as_table(foods_records, "Foods with Nonzero Cholesterol", foods_columns)
+
+    # Query for meals eaten before 13:00
+    cur.execute("SELECT * FROM Meals WHERE EXTRACT(HOUR FROM meal_time) < 13;")
+    meals_records = cur.fetchall()
+    meals_columns = [desc[0] for desc in cur.description]
+    response_string += format_records_as_table(meals_records, "Meals Eaten Before 13:00", meals_columns)
+
+    # Query for days logged by user_id 1
+    cur.execute("SELECT * FROM Days WHERE user_id = 1;")
+    days_records = cur.fetchall()
+    days_columns = [desc[0] for desc in cur.description]
+    response_string += format_records_as_table(days_records, "Days Logged by User ID 1", days_columns)
+
+    # Close the database connection
+    cur.close()
+    conn.close()
+
     return response_string
 
 @app.route('/db_drop')
