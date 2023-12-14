@@ -175,6 +175,7 @@ def testing():
 def create():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
+    # Create Foods table if it doesn't exist
     cur.execute('''
         CREATE TABLE IF NOT EXISTS Foods (
         food_id SERIAL PRIMARY KEY,
@@ -197,9 +198,69 @@ def create():
         potassium REAL               -- Typically in milligrams (mg)
         );
     ''')
+    # Create Dishes table
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS Dishes (
+        dish_id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT
+        );
+    ''')
+    
+    # Create foodsinDish table (junction table)
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS foodsInDish (
+        food_in_dish_id SERIAL PRIMARY KEY,
+        dish_id INT,
+        food_id INT,
+        portion_multiplier REAL,  -- Multiplier for the portion size from Foods table
+        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id),
+        FOREIGN KEY (food_id) REFERENCES Foods(food_id)
+        );
+    ''')
+    
+    # Create an Enum type for meal_type
+    cur.execute('''
+        DO $$ BEGIN
+            CREATE TYPE meal_type AS ENUM ('breakfast', 'lunch', 'dinner', 'snack');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+    ''')
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS Meals (
+        meal_id SERIAL PRIMARY KEY,
+        meal_time TIMESTAMP NOT NULL,
+        dish_id INT,                 -- Foreign key to reference the Dishes table
+        type meal_type NOT NULL,       -- Enum type for meal type
+        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id)
+        );
+    ''')
+    
+    # Create Users table
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS Users (
+        user_id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE
+        );
+    ''')
+
+    # Create Days table
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS Days (
+        day_id SERIAL PRIMARY KEY,
+        date DATE NOT NULL,
+        user_id INT,
+        meal_id INT,
+        FOREIGN KEY (user_id) REFERENCES Users(user_id),
+        FOREIGN KEY (meal_id) REFERENCES Meals(meal_id)
+        );
+    ''')
+    
     conn.commit()
     conn.close()
-    return "Foods Table Successfully Created!"
+    return "All Tables Successfully Created!"
 
 @app.route('/db_insert')
 def inserting():
@@ -207,31 +268,152 @@ def inserting():
     cur = conn.cursor()
     food_items = [('Avocado', 230, 384, 35, 4.9, None, None, 18, 20, 16, 0.7, 4.5, 0, 30, 1.4, 1166),
                   ('Onion, raw', 160, 64, 0.2, 0.1, None, None, 6.4, 15, 2.7, 6.8, 1.8, 0, 37, 0.3, 234),
-                  ('Salami', 28, 119, 10, 3.7, None, 22, 529, 0.3, 0, 0.3, 6.1, None, 2.8, 0.4, 95)]
+                  ('Salami', 28, 119, 10, 3.7, None, 22, 529, 0.3, 0, 0.3, 6.1, None, 2.8, 0.4, 95), 
+                  ('Spinach', 30, 23, 0.4, 0.1, 0, 0, 79, 3.6, 2.2, 0.4, 2.9, 0, 99, 2.7, 558),
+                  ('Chicken Breast', 120, 165, 3.6, 1.0, 0, 85, 74, 0, 0, 0, 31, 0, 13, 1.2, 360),
+                  ('Brown Rice', 195, 218, 1.6, 0.3, 0, 0, 10, 45, 3.5, 0.7, 5, 0, 19, 1.1, 84),
+                  ('Eggs', 50, 78, 5.3, 1.6, 0.1, 186, 62, 0.6, 0, 0.6, 6.3, 1.2, 28, 0.9, 67),
+                  ('Almonds', 30, 164, 14.2, 1.1, 0, 0, 0, 6.1, 3.5, 1.2, 6, 0, 76, 1.1, 206),
+                  ('Tomato', 123, 22, 0.2, 0.0, 0, 0, 6, 4.8, 1.5, 3.2, 1.1, 0, 12, 0.3, 292),
+                  ('Feta Cheese', 28, 75, 6, 4.2, 0, 25, 260, 1.2, 0, 1.2, 4, 0, 140, 0.2, 62),
+                  ('Olive Oil', 15, 119, 13.5, 1.9, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0.1, 0.1),
+                  ('Quinoa', 185, 222, 3.6, 0.4, 0, 0, 13, 39, 5.2, 1.6, 8.1, 0, 31, 2.8, 318),
+                  ('Banana', 118, 105, 0.4, 0.1, 0, 0, 1, 27, 3.1, 14.4, 1.3, 0, 6, 0.3, 422), 
+                  ('Whole Milk', 240, 150, 8, 4.5, 0, 25, 105, 12, 0, 12, 8, 0.1, 280, 0.1, 320), 
+                  ('Penne Pasta', 77, 280, 2, 0, 0, 0, 0, 55, 8, 1, 10, 0, 16, 1, 170)]
     cur.executemany('INSERT INTO Foods (name, portion_size, calories, total_fat, saturated_fat, trans_fat, cholesterol, sodium, total_carbohydrates, dietary_fiber, sugars, protein, vitamin_d, calcium, iron, potassium) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', food_items)
+    # Inserting into Dishes table
+    dishes = [
+        ('Chicken Salad', 'Grilled chicken with spinach, tomatoes, and feta cheese'),
+        ('Egg Fried Rice', 'Fried rice with eggs, onions, and olive oil'),
+        ('Tomato Pasta', 'Pasta with fresh tomato sauce and olive oil'),
+        ('Quinoa Salad', 'Quinoa with spinach, almonds, and avocado'),
+        ('Banana Smoothie', 'Smoothie made with banana, spinach, and almond milk'),
+        ('Chicken Quinoa Bowl', 'Bowl of quinoa with grilled chicken and vegetables')
+    ]
+    cur.executemany('INSERT INTO Dishes (name, description) VALUES (%s, %s)', dishes)
+    
+     # Inserting into foodsinDish table
+    foods_in_dishes = [
+        # For Chicken Salad (dish_id = 1): Chicken Breast, Spinach, Tomato, Feta Cheese
+        (1, 5, 1.0),  # Chicken Breast
+        (1, 4, 1.0),  # Spinach
+        (1, 9, 0.5),  # Tomato
+        (1, 10, 0.5), # Feta Cheese
+
+        # For Egg Fried Rice (dish_id = 2): Eggs, Brown Rice, Onion
+        (2, 7, 2.0),  # Eggs
+        (2, 6, 1.0),  # Brown Rice
+        (2, 2, 0.5),  # Onion
+        (2, 11, 2), # Olive Oil
+
+        # For Tomato Pasta (dish_id = 3): Tomato, Olive Oil
+        (3, 9, 1.0),  # Tomato
+        (3, 11, 0.3), # Olive Oil
+        (3, 15, 1.5), # Penne Pasta
+
+        # For Quinoa Salad (dish_id = 4): Quinoa, Spinach, Almonds, Avocado
+        (4, 12, 1.0), # Quinoa
+        (4, 4, 1.0),  # Spinach
+        (4, 8, 0.5),  # Almonds
+        (4, 1, 0.5),  # Avocado
+
+        # For Banana Smoothie (dish_id = 5): Banana, Spinach, Almonds
+        (5, 13, 1.0), # Banana
+        (5, 4, 0.5),  # Spinach
+        (5, 8, 0.3),  # Almonds
+        (5, 14, 1), #Whole Milk
+
+        # For Chicken Quinoa Bowl (dish_id = 6): Chicken Breast, Quinoa, Tomato
+        (6, 5, 1.0),  # Chicken Breast
+        (6, 12, 1.0), # Quinoa
+        (6, 9, 0.5)   # Tomato
+        # ... Add more as per your recipes
+    ]
+    cur.executemany('INSERT INTO foodsInDish (dish_id, food_id, portion_multiplier) VALUES (%s, %s, %s)', foods_in_dishes)
+    
+     # Inserting into Meals table
+    meals = [
+        ('2023-01-10 08:00:00', 1, 'breakfast'),
+        ('2023-01-10 13:00:00', 2, 'lunch'),
+        ('2023-01-10 18:00:00', 3, 'dinner'),
+        ('2023-01-11 07:30:00', 4, 'breakfast'),
+        ('2023-01-11 12:30:00', 5, 'lunch'),
+        ('2023-01-11 19:00:00', 6, 'dinner')
+    ]
+    cur.executemany('INSERT INTO Meals (meal_time, dish_id, type) VALUES (%s, %s, %s)', meals)
+     # Inserting into Users table
+    users = [
+        ('john_doe'),
+        ('jane_smith'),
+        ('alex_brown')
+    ]
+    cur.executemany('INSERT INTO Users (username) VALUES (%s)', users)
+    
+    # Inserting into Days table
+    day_meals = [
+        ('2023-01-10', 1, 1),
+        ('2023-01-10', 1, 2),
+        ('2023-01-10', 1, 3),
+        ('2023-01-11', 2, 4),
+        ('2023-01-11', 2, 5),
+        ('2023-01-11', 2, 6)
+    ]
+    cur.executemany('INSERT INTO Days (date, user_id, meal_id) VALUES (%s, %s, %s)', day_meals)
     conn.commit()
     conn.close()
-    return "Foods Table Successfully Populated!"
+    return "All Tables Successfully Populated!"
 
 @app.route('/db_select')
 def selecting():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
-    cur.execute('''
-        SELECT * FROM Foods;
-        ''')
-    records = cur.fetchall()
-    conn.close()
-    response_string=""
-    response_string+="<table>"
-    for food in records:
-        response_string+="<tr>"
-        for info in food: 
-            response_string+="<td>{}</td>".format(info)
-        response_string+="</tr>"
-    response_string+="</table>"
-    return response_string
     
+    # Function to format records into an HTML table
+    def format_records_as_table(records, table_name):
+        response_string = "<h2>{}</h2>".format(table_name)
+        response_string += "<table border='1'>"
+        for record in records:
+            response_string += "<tr>"
+            for info in record:
+                response_string += "<td>{}</td>".format(info)
+            response_string += "</tr>"
+        response_string += "</table><br>"
+        return response_string
+
+    # Query and display data from Foods table
+    cur.execute('SELECT * FROM Foods;')
+    records = cur.fetchall()
+    response_string = format_records_as_table(records, "Foods")
+
+    # Query and display data from Dishes table
+    cur.execute('SELECT * FROM Dishes;')
+    records = cur.fetchall()
+    response_string += format_records_as_table(records, "Dishes")
+
+    # Query and display data from foodsInDish table
+    cur.execute('SELECT * FROM foodsInDish;')
+    records = cur.fetchall()
+    response_string += format_records_as_table(records, "foodsinDish")
+
+    # Query and display data from Meals table
+    cur.execute('SELECT * FROM Meals;')
+    records = cur.fetchall()
+    response_string += format_records_as_table(records, "Meals")
+
+    # Query and display data from Users table
+    cur.execute('SELECT * FROM Users;')
+    records = cur.fetchall()
+    response_string += format_records_as_table(records, "Users")
+
+    # Query and display data from Days table
+    cur.execute('SELECT * FROM Days;')
+    records = cur.fetchall()
+    response_string += format_records_as_table(records, "Days")
+
+    conn.close()
+    return response_string
+
 @app.route('/db_drop')
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
