@@ -662,7 +662,7 @@ def db_queries():
     ''')
     meal_type_count = cur.fetchall()
     meal_type_count_columns = [desc[0] for desc in cur.description]
-    response_string = format_records_as_table(meal_type_count, "Total Dishes for Each Meal Type (GROUP BY EXAMPLE)", meal_type_count_columns)
+    response_string += format_records_as_table(meal_type_count, "Total Dishes for Each Meal Type (GROUP BY EXAMPLE)", meal_type_count_columns)
 
     # Close the database connection
     cur.close()
@@ -732,7 +732,7 @@ def db_joins():
     lunch_foods_columns = [desc[0] for desc in cur.description]
     response_string += format_records_as_table(lunch_foods, "Foods in Lunch Dishes", lunch_foods_columns)
     
-    # New Query: Group dishes by shared ingredients
+    # New Query: Display dishes by single ingredients
     cur.execute('''
         SELECT Foods.name AS Ingredient, Dishes.name AS Dish
         FROM Foods
@@ -742,7 +742,7 @@ def db_joins():
     ''')
     dishes_by_ingredients = cur.fetchall()
     dishes_by_ingredients_columns = [desc[0] for desc in cur.description]
-    response_string += format_records_as_table(dishes_by_ingredients, "Dishes Grouped by Shared Ingredients", dishes_by_ingredients_columns)
+    response_string += format_records_as_table(dishes_by_ingredients, "Dishes Ordered By Ingredients", dishes_by_ingredients_columns)
 
     cur.close()
     conn.close()
