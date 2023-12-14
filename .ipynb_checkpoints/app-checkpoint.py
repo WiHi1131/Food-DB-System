@@ -293,6 +293,15 @@ def inserting():
     ]
     cur.executemany('INSERT INTO Dishes (name, description) VALUES (%s, %s)', dishes)
     
+    # Check for the existence of dishes
+    cur.execute('SELECT dish_id FROM Dishes ORDER BY dish_id;')
+    dish_ids = [dish_id[0] for dish_id in cur.fetchall()]
+
+    # Assuming you have 6 dishes as per your dishes list
+    if len(dish_ids) != 6:
+        conn.close()
+        return "Error: Not all dishes are present in the Dishes table."
+    
      # Inserting into foodsinDish table
     foods_in_dishes = [
         # For Chicken Salad (dish_id = 1): Chicken Breast, Spinach, Tomato, Feta Cheese
