@@ -1,5 +1,6 @@
 import psycopg2
 import os
+import json
 
 from flask import Flask
 from flask import render_template
@@ -262,49 +263,114 @@ def create():
         );
     ''')
     
+    # Create FoodUpdatesLog
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS FoodUpdatesLog (
+        log_id SERIAL PRIMARY KEY,
+        food_id INT,
+        old_values JSONB,
+        new_values JSONB,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (food_id) REFERENCES Foods(food_id)
+    );
+    ''')
+    
     def create_triggers(cur):
-        # Trigger function for updating dish_id in foodsInDish
+        # Trigger function to prevent updates to the name in Foods
         cur.execute('''
-            CREATE OR REPLACE FUNCTION update_dish_id()
+            CREATE OR REPLACE FUNCTION prevent_name_update_foods()
             RETURNS TRIGGER AS $$
             BEGIN
-                UPDATE foodsInDish
-                SET dish_id = NEW.dish_id
-                WHERE dish_id = OLD.dish_id;
+                IF OLD.name IS DISTINCT FROM NEW.name THEN
+                    RAISE EXCEPTION 'Updates to food name are not allowed.';
+                END IF;
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
         ''')
-
-        # Trigger for updating dish_id
+        
         cur.execute('''
-            CREATE TRIGGER update_dish_id_trigger
-            AFTER UPDATE OF dish_id ON Dishes
+            CREATE TRIGGER prevent_name_update_foods_trigger
+            BEFORE UPDATE OF name ON Foods
             FOR EACH ROW
-            EXECUTE FUNCTION update_dish_id();
+            EXECUTE FUNCTION prevent_name_update_foods();
         ''')
-
-        # Trigger function for updating food_id in foodsInDish
+        
+        # Trigger function to prevent updates to the name in Dishes
         cur.execute('''
-            CREATE OR REPLACE FUNCTION update_food_id()
+            CREATE OR REPLACE FUNCTION prevent_name_update_dishes()
             RETURNS TRIGGER AS $$
             BEGIN
-                UPDATE foodsInDish
-                SET food_id = NEW.food_id
-                WHERE food_id = OLD.food_id;
+                IF OLD.name IS DISTINCT FROM NEW.name THEN
+                    RAISE EXCEPTION 'Updates to dish name are not allowed.';
+                END IF;
                 RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
         ''')
-
-        # Trigger for updating food_id
+        
         cur.execute('''
-            CREATE TRIGGER update_food_id_trigger
-            AFTER UPDATE OF food_id ON Foods
+            CREATE TRIGGER prevent_name_update_dishes_trigger
+            BEFORE UPDATE OF name ON Dishes
             FOR EACH ROW
-            EXECUTE FUNCTION update_food_id();
+            EXECUTE FUNCTION prevent_name_update_dishes();
         ''')
-
+        #Trigger function to log updates in Foods
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION log_food_updates()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                INSERT INTO FoodUpdatesLog (food_id, old_values, new_values)
+                VALUES (
+                    OLD.food_id,
+                    jsonb_build_object(
+                        'portion_size', OLD.portion_size,
+                        'calories', OLD.calories,
+                        'total_fat', OLD.total_fat,
+                        'saturated_fat', OLD.saturated_fat,
+                        'trans_fat', OLD.trans_fat, 
+                        'cholesterol', OLD.cholesterol,
+                        'sodium', OLD.sodium, 
+                        'total_carbohydrates', OLD.total_carbohydrates,
+                        'dietary_fiber', OLD.dietary_fiber, 
+                        'sugars', OLD.sugars,
+                        'protein', OLD.protein, 
+                        'vitamin_d', OLD.vitamin_d, 
+                        'calcium', OLD.calcium,
+                        'iron', OLD.iron,
+                        'potassium', OLD.potassium
+                    ),
+                    jsonb_build_object(
+                        'portion_size', NEW.portion_size,
+                        'calories', NEW.calories,
+                        'total_fat', NEW.total_fat,
+                        'saturated_fat', NEW.saturated_fat,
+                        'trans_fat', NEW.trans_fat, 
+                        'cholesterol', NEW.cholesterol,
+                        'sodium', NEW.sodium, 
+                        'total_carbohydrates', NEW.total_carbohydrates,
+                        'dietary_fiber', NEW.dietary_fiber, 
+                        'sugars', NEW.sugars,
+                        'protein', NEW.protein, 
+                        'vitamin_d', NEW.vitamin_d, 
+                        'calcium', NEW.calcium,
+                        'iron', NEW.iron,
+                        'potassium', NEW.potassium
+                    )
+                );
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        #Trigger for logging updates
+        cur.exectute('''
+            CREATE TRIGGER foods_update_log_trigger
+            AFTER UPDATE OF calories, total_fat, sodium -- Add other fields as needed
+            ON Foods
+            FOR EACH ROW
+            WHEN (OLD.* IS DISTINCT FROM NEW.*)
+            EXECUTE FUNCTION log_food_updates();
+        ''')
         # Trigger function for deleting dish in foodsInDish
         cur.execute('''
             CREATE OR REPLACE FUNCTION delete_dish()
@@ -343,25 +409,6 @@ def create():
             EXECUTE FUNCTION delete_food();
         ''')
         
-        # Update dish_id in Meals
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION update_meals_dish_id()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                UPDATE Meals
-                SET dish_id = NEW.dish_id
-                WHERE dish_id = OLD.dish_id;
-                RETURN NEW;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER update_meals_dish_id_trigger
-            AFTER UPDATE OF dish_id ON Dishes
-            FOR EACH ROW
-            EXECUTE FUNCTION update_meals_dish_id();
-        ''')
-
         # Delete meal when Dish is deleted
         cur.execute('''
             CREATE OR REPLACE FUNCTION delete_meal()
@@ -380,43 +427,6 @@ def create():
         ''')
 
         # Triggers for Days table
-        # Update user_id in Days
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION update_days_user_id()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                UPDATE Days
-                SET user_id = NEW.user_id
-                WHERE user_id = OLD.user_id;
-                RETURN NEW;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER update_days_user_id_trigger
-            AFTER UPDATE OF user_id ON Users
-            FOR EACH ROW
-            EXECUTE FUNCTION update_days_user_id();
-        ''')
-
-        # Update meal_id in Days
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION update_days_meal_id()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                UPDATE Days
-                SET meal_id = NEW.meal_id
-                WHERE meal_id = OLD.meal_id;
-                RETURN NEW;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER update_days_meal_id_trigger
-            AFTER UPDATE OF meal_id ON Meals
-            FOR EACH ROW
-            EXECUTE FUNCTION update_days_meal_id();
-        ''')
 
         # Delete day when User is deleted
         cur.execute('''
@@ -451,6 +461,7 @@ def create():
             FOR EACH ROW
             EXECUTE FUNCTION delete_day_meal();
         ''')
+    
     # Create triggers
     create_triggers(cur)
     
@@ -748,13 +759,71 @@ def db_joins():
     conn.close()
     return response_string
 
+@app.route('/db_updates')
+def db_updates():
+    conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
+    cur = conn.cursor()
+
+    def format_records_as_table(records, table_name, column_names):
+        response_string = f"<h2>{table_name}</h2>"
+        response_string += "<table border='1'>"
+        for col_name in column_names:
+            response_string += f"<th>{col_name}</th>"
+        response_string += "</tr>"
+        for record in records:
+            response_string += "<tr>"
+            for info in record:
+                response_string += f"<td>{info}</td>"
+            response_string += "</tr>"
+        response_string += "</table><br>"
+        return response_string
+
+    response_string = ""
+
+    # Attempt to update name in Foods table (should fail)
+    try:
+        cur.execute("UPDATE Foods SET name = 'Updated Name' WHERE food_id = 1;")
+        conn.commit()
+        response_string += "<p>Update to Foods name successful (unexpected).</p>"
+    except psycopg2.Error as e:
+        response_string += f"<p>Error updating Foods name: {e}</p>"
+        conn.rollback()
+
+    # Attempt to update name in Dishes table (should fail)
+    try:
+        cur.execute("UPDATE Dishes SET name = 'Updated Name' WHERE dish_id = 1;")
+        conn.commit()
+        response_string += "<p>Update to Dishes name successful (unexpected).</p>"
+    except psycopg2.Error as e:
+        response_string += f"<p>Error updating Dishes name: {e}</p>"
+        conn.rollback()
+
+    # Update nutritional values in Foods table and check log
+    try:
+        cur.execute("UPDATE Foods SET calories = 500 WHERE food_id = 1;")
+        conn.commit()
+        response_string += "<p>Nutritional values in Foods updated successfully.</p>"
+
+        # Display FoodUpdatesLog
+        cur.execute("SELECT * FROM FoodUpdatesLog;")
+        log_records = cur.fetchall()
+        log_columns = [desc[0] for desc in cur.description]
+        response_string += format_records_as_table(log_records, "FoodUpdatesLog", log_columns)
+    except psycopg2.Error as e:
+        response_string += f"<p>Error updating Foods nutritional values: {e}</p>"
+        conn.rollback()
+
+    cur.close()
+    conn.close()
+    return response_string
+
 @app.route('/db_drop')
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
 
     # Drop tables in reverse order of creation due to foreign key constraints
-    tables_to_drop = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
+    tables_to_drop = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users', 'FoodUpdatesLog']
 
     for table in tables_to_drop:
         cur.execute('DROP TABLE IF EXISTS {};'.format(table))
