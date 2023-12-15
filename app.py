@@ -851,7 +851,7 @@ def db_deletes():
     response_string = ""
 
     # Delete the first item from each table and show which items were deleted
-    tables_to_delete_from = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
+    tables_to_delete_from = ['Foods', 'Dishes', 'foodsinDish', 'Meals', 'Users', 'Days']
     for table in tables_to_delete_from:
         try:
             cur.execute(f'DELETE FROM {table} WHERE ctid IN (SELECT ctid FROM {table} LIMIT 1) RETURNING *;')
@@ -890,7 +890,7 @@ def dropping():
         cur.execute(f'DROP TRIGGER IF EXISTS {trigger} ON public.Foods;')
 
     # Drop tables in reverse order of creation due to foreign key constraints
-    tables_to_drop = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users', 'FoodUpdatesLog']
+    tables_to_drop = ['FoodUpdatesLog', 'Days', 'Users', 'Meals', 'foodsinDish', 'Dishes', 'Foods']
 
     for table in tables_to_drop:
         cur.execute('DROP TABLE IF EXISTS {};'.format(table))
