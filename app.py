@@ -850,12 +850,11 @@ def db_deletes():
 
     response_string = ""
 
-    # Delete an item from each table and show which items were deleted
-    # Note: Modify the WHERE clause as needed to match your data
+    # Delete the first item from each table and show which items were deleted
     tables_to_delete_from = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
     for table in tables_to_delete_from:
         try:
-            cur.execute(f'DELETE FROM {table} WHERE {table.lower()}_id = 1 RETURNING *;')
+            cur.execute(f'DELETE FROM {table} WHERE ctid IN (SELECT ctid FROM {table} LIMIT 1) RETURNING *;')
             deleted_records = cur.fetchall()
             if deleted_records:
                 response_string += f"<p>Deleted from {table}: {deleted_records}</p>"
