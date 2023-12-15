@@ -822,7 +822,6 @@ def db_deletes():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
 
-    # Function to format records into an HTML table
     def format_records_as_table(records, table_name, column_names):
         response_string = f"<h2>{table_name}</h2>"
         response_string += "<table border='1'>"
@@ -850,14 +849,17 @@ def db_deletes():
 
     response_string = ""
 
-    # Delete the first item from each table and show which items were deleted
-    tables_to_delete_from = ['Foods', 'Dishes', 'foodsinDish', 'Meals', 'Users', 'Days']
-    for table in tables_to_delete_from:
+    # Correct order to respect foreign key constraints
+    deletion_order = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
+
+    for table in deletion_order:
         try:
+            # Deleting the first record found in each table
             cur.execute(f'DELETE FROM {table} WHERE ctid IN (SELECT ctid FROM {table} LIMIT 1) RETURNING *;')
             deleted_records = cur.fetchall()
             if deleted_records:
-                response_string += f"<p>Deleted from {table}: {deleted_records}</p>"
+                deleted_records_formatted = ', '.join([str(record) for record in deleted_records])
+                response_string += f"<p>Deleted from {table}: {deleted_records_formatted}</p>"
             else:
                 response_string += f"<p>No record deleted from {table} (not found or already deleted).</p>"
         except psycopg2.Error as e:
@@ -865,7 +867,7 @@ def db_deletes():
             conn.rollback()
 
     # Query and display data from each table after deletion
-    for table in ["Foods", "Dishes", "foodsinDish", "Meals", "Users", "Days"]:
+    for table in ["Users", "Foods", "Dishes", "foodsinDish", "Meals", "Days"]:
         response_string += query_and_format_table(cur, table)
 
     conn.commit()
