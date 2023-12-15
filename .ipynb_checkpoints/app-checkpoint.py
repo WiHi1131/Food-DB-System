@@ -817,6 +817,63 @@ def db_updates():
     conn.close()
     return response_string
 
+@app.route('/db_deletes')
+def db_deletes():
+    conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
+    cur = conn.cursor()
+
+    # Function to format records into an HTML table
+    def format_records_as_table(records, table_name, column_names):
+        response_string = f"<h2>{table_name}</h2>"
+        response_string += "<table border='1'>"
+        
+        # Add column headers
+        response_string += "<tr>"
+        for col_name in column_names:
+            response_string += f"<th>{col_name}</th>"
+        response_string += "</tr>"
+        
+        # Add table data
+        for record in records:
+            response_string += "<tr>"
+            for info in record:
+                response_string += f"<td>{info}</td>"
+            response_string += "</tr>"
+        response_string += "</table><br>"
+        return response_string
+
+    def query_and_format_table(cur, table_name):
+        cur.execute(f'SELECT * FROM {table_name};')
+        records = cur.fetchall()
+        column_names = [desc[0] for desc in cur.description]
+        return format_records_as_table(records, table_name, column_names)
+
+    response_string = ""
+
+    # Delete an item from each table and show which items were deleted
+    # Note: Modify the WHERE clause as needed to match your data
+    tables_to_delete_from = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users']
+    for table in tables_to_delete_from:
+        try:
+            cur.execute(f'DELETE FROM {table} WHERE {table.lower()}_id = 1 RETURNING *;')
+            deleted_records = cur.fetchall()
+            if deleted_records:
+                response_string += f"<p>Deleted from {table}: {deleted_records}</p>"
+            else:
+                response_string += f"<p>No record deleted from {table} (not found or already deleted).</p>"
+        except psycopg2.Error as e:
+            response_string += f"<p>Error deleting from {table}: {e}</p>"
+            conn.rollback()
+
+    # Query and display data from each table after deletion
+    for table in ["Foods", "Dishes", "foodsinDish", "Meals", "Users", "Days"]:
+        response_string += query_and_format_table(cur, table)
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    return response_string
+
 @app.route('/db_drop')
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
