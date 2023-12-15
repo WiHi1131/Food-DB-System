@@ -219,8 +219,8 @@ def create():
         dish_id INT,
         food_id INT,
         portion_multiplier REAL,  -- Multiplier for the portion size from Foods table
-        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id),
-        FOREIGN KEY (food_id) REFERENCES Foods(food_id)
+        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id) ON DELETE CASCADE,
+        FOREIGN KEY (food_id) REFERENCES Foods(food_id) ON DELETE CASCADE
         );
     ''')
     
@@ -239,7 +239,7 @@ def create():
         meal_time TIMESTAMP NOT NULL,
         dish_id INT,                 -- Foreign key to reference the Dishes table
         type meal_type NOT NULL,       -- Enum type for meal type
-        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id)
+        FOREIGN KEY (dish_id) REFERENCES Dishes(dish_id) ON DELETE CASCADE
         );
     ''')
     
@@ -258,8 +258,8 @@ def create():
         date DATE NOT NULL,
         user_id INT,
         meal_id INT,
-        FOREIGN KEY (user_id) REFERENCES Users(user_id),
-        FOREIGN KEY (meal_id) REFERENCES Meals(meal_id)
+        FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE, 
+        FOREIGN KEY (meal_id) REFERENCES Meals(meal_id) ON DELETE CASCADE
         );
     ''')
     
@@ -271,7 +271,7 @@ def create():
         old_values JSONB,
         new_values JSONB,
         update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (food_id) REFERENCES Foods(food_id)
+        FOREIGN KEY (food_id) REFERENCES Foods(food_id) ON DELETE CASCADE
     );
     ''')
     
@@ -371,96 +371,7 @@ def create():
             WHEN (OLD.* IS DISTINCT FROM NEW.*)
             EXECUTE FUNCTION log_food_updates();
         ''')
-        # Trigger function for deleting dish in foodsInDish
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION delete_dish()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                DELETE FROM foodsInDish WHERE dish_id = OLD.dish_id;
-                RETURN OLD;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-
-        # Trigger for deleting dish
-        cur.execute('''
-            CREATE TRIGGER delete_dish_trigger
-            AFTER DELETE ON Dishes
-            FOR EACH ROW
-            EXECUTE FUNCTION delete_dish();
-        ''')
-
-        # Trigger function for deleting food in foodsInDish
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION delete_food()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                DELETE FROM foodsInDish WHERE food_id = OLD.food_id;
-                RETURN OLD;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-
-        # Trigger for deleting food
-        cur.execute('''
-            CREATE TRIGGER delete_food_trigger
-            AFTER DELETE ON Foods
-            FOR EACH ROW
-            EXECUTE FUNCTION delete_food();
-        ''')
         
-        # Delete meal when Dish is deleted
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION delete_meal()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                DELETE FROM Meals WHERE dish_id = OLD.dish_id;
-                RETURN OLD;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER delete_meal_trigger
-            AFTER DELETE ON Dishes
-            FOR EACH ROW
-            EXECUTE FUNCTION delete_meal();
-        ''')
-
-        # Triggers for Days table
-
-        # Delete day when User is deleted
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION delete_day_user()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                DELETE FROM Days WHERE user_id = OLD.user_id;
-                RETURN OLD;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER delete_day_user_trigger
-            AFTER DELETE ON Users
-            FOR EACH ROW
-            EXECUTE FUNCTION delete_day_user();
-        ''')
-
-        # Delete day when Meal is deleted
-        cur.execute('''
-            CREATE OR REPLACE FUNCTION delete_day_meal()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                DELETE FROM Days WHERE meal_id = OLD.meal_id;
-                RETURN OLD;
-            END;
-            $$ LANGUAGE plpgsql;
-        ''')
-        cur.execute('''
-            CREATE TRIGGER delete_day_meal_trigger
-            AFTER DELETE ON Meals
-            FOR EACH ROW
-            EXECUTE FUNCTION delete_day_meal();
-        ''')
     
     # Create triggers
     create_triggers(cur)
