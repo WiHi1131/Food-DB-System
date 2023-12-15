@@ -363,7 +363,7 @@ def create():
             $$ LANGUAGE plpgsql;
         ''')
         #Trigger for logging updates
-        cur.exectute('''
+        cur.execute('''
             CREATE TRIGGER foods_update_log_trigger
             AFTER UPDATE OF calories, total_fat, sodium -- Add other fields as needed
             ON Foods
