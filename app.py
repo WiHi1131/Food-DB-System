@@ -821,6 +821,17 @@ def db_updates():
 def dropping():
     conn = psycopg2.connect("postgres://food_db_msqq_user:96WkFN4LYyA6g0p8n9ykbw7GT0KQudsM@dpg-clok7g1oh6hc73bia110-a/food_db_msqq")
     cur = conn.cursor()
+    
+    # List of triggers to drop
+    triggers_to_drop = [
+        'prevent_name_update_foods_trigger', 'prevent_name_update_dishes_trigger', 
+        'foods_update_log_trigger', 'delete_dish_trigger', 'delete_food_trigger', 
+        'delete_meal_trigger', 'delete_day_user_trigger', 'delete_day_meal_trigger'
+    ]
+
+    # Drop triggers
+    for trigger in triggers_to_drop:
+        cur.execute(f'DROP TRIGGER IF EXISTS {trigger} ON public.Foods;')
 
     # Drop tables in reverse order of creation due to foreign key constraints
     tables_to_drop = ['Days', 'Meals', 'foodsinDish', 'Dishes', 'Foods', 'Users', 'FoodUpdatesLog']
@@ -833,4 +844,4 @@ def dropping():
 
     conn.commit()
     conn.close()
-    return "All Tables Successfully Dropped"
+    return "All Tables and Triggers Successfully Dropped"
